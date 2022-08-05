@@ -232,6 +232,7 @@ namespace API_test
                 double levelHeight = 0;
                 List<double> levelHeigtList = new List<double>();
                 List<ElementId> levelDataList = new List<ElementId>();
+                List<XYZ> wallPointList = new List<XYZ>();
 
                 for (int i = 0; i < newlevels.Count; i++)//----------------------製作結構牆
                 {
@@ -256,6 +257,19 @@ namespace API_test
                     foreach (Line lin in s_wallEdgeLine)
                     {
                         Wall wall = Wall.Create(doc, lin, NewWallType_s_wall.Id, levelDataList[i], levelHeigtList[i], 0, false, false);
+
+                        LocationCurve lc = wall.Location as LocationCurve;
+                        XYZ PSt = lc.Curve.GetEndPoint(0);
+                        XYZ PEn = lc.Curve.GetEndPoint(1);
+                        XYZ PAv = new XYZ((PSt.X + PEn.X) / 2, (PSt.Y + PEn.Y) / 2, 0);//----------------------------------------------------------------取牆中點，改牆定位線
+                        wallPointList.Add(PAv);
+
+                        foreach(XYZ xyz in wallPointList)
+                        {
+
+                        }
+
+
                     }
                 }
 
@@ -335,7 +349,6 @@ namespace API_test
 
                 else if (li.Contains(NewFloorTypeName) == true)
                 {
-
                     foreach (FloorType floorType in collector)
                     {
                         if (floorType.Name == NewFloorTypeName)
@@ -363,6 +376,8 @@ namespace API_test
             IList<Element> diglevels = collector.OfClass(typeof(Level)).ToElements();
             Level level_ = null;
             List<double> digsHeightList = new List<double>();
+            List<Level> digsLevelList = new List<Level>();
+            List<Line> dig_EdgeList = new List<Line>();
 
             using (Transaction ttt = new Transaction(doc, "Create Dig API"))//----------------------建立擴挖區
             {
@@ -374,8 +389,9 @@ namespace API_test
                     {
                         if (JB_digData[i]["Level_id"].ToString() == JB_levelData[j]["index"].ToString())
                         {
-                            double digHeight = Convert.ToDouble(JB_levelData[j + 1]["height"]) - Convert.ToDouble(JB_levelData[j]["height"]);
-                            MessageBox.Show(digHeight.ToString());
+                            double digHeight = Convert.ToDouble(JB_levelData[j + 1]["height"]) / 0.3048 - Convert.ToDouble(JB_levelData[j]["height"]) / 0.3048;
+                            digsHeightList.Add(digHeight);
+                            //MessageBox.Show(digHeight.ToString());
                         }
                     }
                 }
@@ -393,14 +409,43 @@ namespace API_test
                                 if(el.Name == levelNme)
                                 {
                                     level_ = (Level)el;
-                                    MessageBox.Show(level_.Name);
+                                    digsLevelList.Add(level_);
+                                    //MessageBox.Show(level_.Name);
                                 }
                             }
                         }
                     }
                 }
 
-                //Wall wall = Wall.Create(doc, lin, NewWallType_c_wall.Id, level_.Id, MaxIndex / 0.3048 - MinIndex / 0.3048, 0, false, false);
+                for(int i = 0; i < JB_digData.Count; i++)
+                {
+                    XYZ dig_DatumPoint = new XYZ(Math.Round(Convert.ToDouble(JB_digData[i]["Dig_x"]), 2) / 0.3048, Convert.ToDouble(JB_digData[i]["Dig_y"]) / 0.3048, 0);
+                    XYZ dig_1QuadrantPoint = new XYZ(Math.Round(Convert.ToDouble(JB_digData[i]["Dig_x"]), 2) / 0.3048 + Convert.ToDouble(JB_digData[i]["Length"]) / 0.3048, Convert.ToDouble(JB_digData[i]["Dig_y"]) / 0.3048, 0);
+                    XYZ dig_3QuadrantPoint = new XYZ(Math.Round(Convert.ToDouble(JB_digData[i]["Dig_x"]), 2) / 0.3048, Convert.ToDouble(JB_digData[i]["Dig_y"]) / 0.3048 - Convert.ToDouble(JB_digData[i]["Width"]) / 0.3048, 0);
+                    XYZ dig_4QuadrantPoint = new XYZ(Math.Round(Convert.ToDouble(JB_digData[i]["Dig_x"]), 2) / 0.3048 + Convert.ToDouble(JB_digData[i]["Length"]) / 0.3048, Convert.ToDouble(JB_digData[i]["Dig_y"]) / 0.3048 - Convert.ToDouble(JB_digData[i]["Width"]) / 0.3048, 0);
+
+                    Line dig_Edge01 = Line.CreateBound(dig_DatumPoint, dig_1QuadrantPoint);
+                    Line dig_Edge02 = Line.CreateBound(dig_DatumPoint, dig_3QuadrantPoint);
+                    Line dig_Edge03 = Line.CreateBound(dig_1QuadrantPoint, dig_4QuadrantPoint);
+                    Line dig_Edge04 = Line.CreateBound(dig_3QuadrantPoint, dig_4QuadrantPoint);
+
+                    dig_EdgeList = new List<Line>();
+                    dig_EdgeList.Add(dig_Edge01);
+                    dig_EdgeList.Add(dig_Edge02);
+                    dig_EdgeList.Add(dig_Edge03);
+                    dig_EdgeList.Add(dig_Edge04);
+
+                    foreach(Line lin in dig_EdgeList)
+                    {
+                        Wall wall = Wall.Create(doc, lin, NewWallType_s_wall.Id, digsLevelList[i].Id, digsHeightList[i], 0, false, false);
+
+
+                        LocationCurve lc = wall.Location as LocationCurve;
+                        lc.Curve.GetEndPoint(0);
+                    }
+                }
+
+
 
                 ttt.Commit();
             }
