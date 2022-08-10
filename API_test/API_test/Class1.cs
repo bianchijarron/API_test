@@ -232,7 +232,9 @@ namespace API_test
                 double levelHeight = 0;
                 List<double> levelHeigtList = new List<double>();
                 List<ElementId> levelDataList = new List<ElementId>();
-                List<XYZ> wallPointList = new List<XYZ>();
+                List<double> wallPointListX = new List<double>();
+                List<double> wallPointListY = new List<double>();
+                List<Wall> s_wallList = new List<Wall>();
 
                 for (int i = 0; i < newlevels.Count; i++)//----------------------製作結構牆
                 {
@@ -254,6 +256,10 @@ namespace API_test
 
                 for (int i = 0; i < newlevels.Count; i++)
                 {
+                    wallPointListX = new List<double>();
+                    wallPointListY = new List<double>();
+                    s_wallList = new List<Wall>();
+
                     foreach (Line lin in s_wallEdgeLine)
                     {
                         Wall wall = Wall.Create(doc, lin, NewWallType_s_wall.Id, levelDataList[i], levelHeigtList[i], 0, false, false);
@@ -261,15 +267,39 @@ namespace API_test
                         LocationCurve lc = wall.Location as LocationCurve;
                         XYZ PSt = lc.Curve.GetEndPoint(0);
                         XYZ PEn = lc.Curve.GetEndPoint(1);
-                        XYZ PAv = new XYZ((PSt.X + PEn.X) / 2, (PSt.Y + PEn.Y) / 2, 0);//----------------------------------------------------------------取牆中點，改牆定位線
-                        wallPointList.Add(PAv);
+                        XYZ PAv = new XYZ((PSt.X + PEn.X) / 2, (PSt.Y + PEn.Y) / 2, 0);//----------------------------------------------------------------取牆中點，改結構牆定位線
+                        wallPointListX.Add(PAv.X);
+                        wallPointListY.Add(PAv.Y);
+                        s_wallList.Add(wall);
+                    }
 
-                        foreach(XYZ xyz in wallPointList)
+                    double MaxX = wallPointListX.Max();
+                    double MinX = wallPointListX.Min();
+                    double MaxY = wallPointListY.Max();
+                    double MinY = wallPointListY.Min();
+
+                    for (int k = 0; k < s_wallList.Count; k++)
+                    {
+                        if (wallPointListX[k] == MaxX)
                         {
-
+                            Parameter pa = s_wallList[k].get_Parameter(BuiltInParameter.WALL_KEY_REF_PARAM);
+                            pa.Set(3);
                         }
-
-
+                        else if (wallPointListX[k] == MinX)
+                        {
+                            Parameter pa = s_wallList[k].get_Parameter(BuiltInParameter.WALL_KEY_REF_PARAM);
+                            pa.Set(2);
+                        }
+                        else if (wallPointListY[k] == MaxY)
+                        {
+                            Parameter pa = s_wallList[k].get_Parameter(BuiltInParameter.WALL_KEY_REF_PARAM);
+                            pa.Set(3);
+                        }
+                        else if (wallPointListY[k] == MinY)
+                        {
+                            Parameter pa = s_wallList[k].get_Parameter(BuiltInParameter.WALL_KEY_REF_PARAM);
+                            pa.Set(2);
+                        }
                     }
                 }
 
@@ -292,13 +322,54 @@ namespace API_test
                     }
                 }
 
+                wallPointListX = new List<double>();
+                wallPointListY = new List<double>();
+                s_wallList = new List<Wall>();
+
                 foreach (Curve lin in c_wallEdgeLine)
                 {
                     Wall wall = Wall.Create(doc, lin, NewWallType_c_wall.Id, maxLevel.Id, MaxIndex / 0.3048 - MinIndex / 0.3048, 0, false, false);
                     Parameter pa = wall.get_Parameter(BuiltInParameter.FLOOR_HEIGHTABOVELEVEL_PARAM);
+
+                    LocationCurve lc = wall.Location as LocationCurve;
+                    XYZ PSt = lc.Curve.GetEndPoint(0);
+                    XYZ PEn = lc.Curve.GetEndPoint(1);
+                    XYZ PAv = new XYZ((PSt.X + PEn.X) / 2, (PSt.Y + PEn.Y) / 2, 0);//----------------------------------------------------------------取牆中點，改連續壁定位線
+                    wallPointListX.Add(PAv.X);
+                    wallPointListY.Add(PAv.Y);
+                    s_wallList.Add(wall);
                 }
 
-                ttt.Commit();
+                double MaxX_ = wallPointListX.Max();
+                double MinX_ = wallPointListX.Min();
+                double MaxY_ = wallPointListY.Max();
+                double MinY_ = wallPointListY.Min();
+
+                for (int k = 0; k < s_wallList.Count; k++)
+                {
+                    if (wallPointListX[k] == MaxX_)
+                    {
+                        Parameter pa = s_wallList[k].get_Parameter(BuiltInParameter.WALL_KEY_REF_PARAM);
+                        pa.Set(2);
+                    }
+                    else if (wallPointListX[k] == MinX_)
+                    {
+                        Parameter pa = s_wallList[k].get_Parameter(BuiltInParameter.WALL_KEY_REF_PARAM);
+                        pa.Set(3);
+                    }
+                    else if (wallPointListY[k] == MaxY_)
+                    {
+                        Parameter pa = s_wallList[k].get_Parameter(BuiltInParameter.WALL_KEY_REF_PARAM);
+                        pa.Set(2);
+                    }
+                    else if (wallPointListY[k] == MinY_)
+                    {
+                        Parameter pa = s_wallList[k].get_Parameter(BuiltInParameter.WALL_KEY_REF_PARAM);
+                        pa.Set(3);
+                    }
+                }
+
+                    ttt.Commit();
             }
 
             FloorType NewFloorType = null;
@@ -364,14 +435,13 @@ namespace API_test
 
                 foreach (Element elm in newlevels)
                 {
-                    Floor floor = doc.Create.NewFloor(profile, NewFloorType, elm as Level, true, normal);
-                    Parameter pa = floor.get_Parameter(BuiltInParameter.FLOOR_HEIGHTABOVELEVEL_PARAM);
-                    pa.Set(0);
+                    //Floor floor = doc.Create.NewFloor(profile, NewFloorType, elm as Level, true, normal);
+                    //Parameter pa = floor.get_Parameter(BuiltInParameter.FLOOR_HEIGHTABOVELEVEL_PARAM);
+                    //pa.Set(0);
                 }
 
                 ttt.Commit();
             }
-
 
             IList<Element> diglevels = collector.OfClass(typeof(Level)).ToElements();
             Level level_ = null;
@@ -444,8 +514,6 @@ namespace API_test
                         lc.Curve.GetEndPoint(0);
                     }
                 }
-
-
 
                 ttt.Commit();
             }
