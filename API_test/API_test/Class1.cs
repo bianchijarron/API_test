@@ -16,7 +16,6 @@ namespace API_test
     [Autodesk.Revit.Attributes.Transaction(Autodesk.Revit.Attributes.TransactionMode.Manual)]
     public class Class1:IExternalCommand
     {
-        public static List<MRTStation> list;
         static string stationData = File.ReadAllText(@"E:\StationData.txt");
         static JObject JB_stationData = (JObject)JsonConvert.DeserializeObject(stationData);
         static string levelData = File.ReadAllText(@"E:\LevelData.txt");
@@ -510,8 +509,8 @@ namespace API_test
                         Wall wall = Wall.Create(doc, lin, NewWallType_s_wall.Id, digsLevelList[i].Id, digsHeightList[i], 0, false, false);
 
 
-                        LocationCurve lc = wall.Location as LocationCurve;
-                        lc.Curve.GetEndPoint(0);
+                        //LocationCurve lc = wall.Location as LocationCurve;
+                        //lc.Curve.GetEndPoint(0);
                     }
                 }
 
